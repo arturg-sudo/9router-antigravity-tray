@@ -4,10 +4,6 @@
 
 [English](README.md) | [Русский](README_RU.md)
 
-<p align="center">
-  <img src="assets/menu_preview.png" alt="Предпросмотр меню" width="460">
-</p>
-
 ## Зачем это нужно
 
 Когда в 9Router подключено несколько аккаунтов Antigravity (от 5 и более), проверять остаток квоты и время сброса через браузер неудобно.

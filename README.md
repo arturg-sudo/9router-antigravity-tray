@@ -4,10 +4,6 @@ A lightweight Windows system tray monitor for 9Router Antigravity accounts. It t
 
 [English](README.md) | [Русский](README_RU.md)
 
-<p align="center">
-  <img src="assets/menu_preview.png" alt="Context Menu Preview" width="460">
-</p>
-
 ## Why this exists
 
 If you run multiple Antigravity accounts in 9Router (5 or more), tracking when your pool resets or how much buffer you have left usually means opening the web UI or making manual requests. 
