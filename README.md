@@ -6,13 +6,11 @@ A lightweight Windows system tray monitor for 9Router Antigravity accounts. It t
 
 ## Why this exists
 
-If you run multiple Antigravity accounts in 9Router (5 or more), tracking when your pool resets or how much buffer you have left usually means opening the web UI or making manual requests. 
-
-This tool puts that info in the system tray near the clock. It reads the local 9Router database and API directly on your machine, tallies the total pool percentage, and calculates the earliest reset time for active models.
+This tool displays Antigravity quota stats directly in the Windows system tray near the clock. It reads the local 9Router database and API on your machine, tallies total pool percentages, and tracks the earliest reset time without needing to open the web UI.
 
 ## Features
 
-- Sums up total pool quotas across all active Antigravity accounts (e.g., 650% Gemini across 10 accounts).
+- Sums up total pool quotas across all active Antigravity accounts.
 - Calculates the earliest reset time in minutes for models running low.
 - Native Windows 11 dark context menu and monochrome tray icon.
 - Runs with per-monitor DPI awareness so text stays sharp on 1440p and 4K displays.
