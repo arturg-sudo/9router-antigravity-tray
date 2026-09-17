@@ -1,77 +1,64 @@
-# 9Router Antigravity Tray Monitor 🚀
+# 9router-antigravity-tray
 
-> **Легковесный монитор суммарных квот пула аккаунтов Google Antigravity (Gemini / Claude) для 9Router в системном трее Windows 11.**
+A lightweight Windows system tray monitor for 9Router Antigravity accounts. It tracks aggregated Gemini and Claude pool quotas across multiple accounts and shows the earliest reset timer.
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D6.svg)
-![Python](https://img.shields.io/badge/python-3.9%2B-brightgreen.svg)
-
----
-
-## 📸 Скриншот
+[English](README.md) | [Русский](README_RU.md)
 
 <p align="center">
-  <img src="assets/menu_preview.png" alt="9Router Antigravity Tray Preview" width="480">
+  <img src="assets/menu_preview.png" alt="Context Menu Preview" width="460">
 </p>
 
----
+## Why this exists
 
-## ✨ Возможности
+If you run 10 to 18 Antigravity accounts in 9Router, tracking when your pool resets or how much buffer you have left usually means opening the web UI or making manual requests. 
 
-- 📊 **Суммирование пула аккаунтов**: если у вас подключено 12 аккаунтов, монитор отображает реальный суммарный процент пула (например, `Gemini: 651%`, `Claude: 841%`).
-- ⏱️ **Умный таймер сброса**: точно вычисляет ближайшее время сброса лимитов в минутах для моделей, квота которых исчерпана или расходуется.
-- 🎨 **Нативный стиль Windows 11 Dark Mode**:
-  - Чёрно-белая иконка в трее у системных часов.
-  - Нативное тёмное контекстное меню Win32 (`uxtheme` ForceDark).
-  - Поддержка Per-Monitor V2 DPI (идеальная чёткость шрифтов на 2K / 4K дисплеях без мыла).
-- ⚡ **Параллельный опрос (ThreadPoolExecutor)**: опрос десятков аккаунтов занимает ~1–2 секунды без зависания интерфейса.
-- 🔒 **Безопасность и автономность**:
-  - Не требует ввода паролей или API-ключей.
-  - Читает авторизацию и локальный пул напрямую из локального сервиса 9Router (`localhost:20128`).
-- 🛡️ **Защита от дубликатов**: встроен Win32 Named Mutex — запуск второй копии процесса физически невозможен.
-- 🪶 **Экстремально лёгкий**: потребляет всего ~15 МБ оперативной памяти (без Electron, Chromium или WebView).
+This tool puts that info in the system tray near the clock. It reads the local 9Router database and API directly on your machine, tallies the total pool percentage, and calculates the earliest reset time for active models.
 
----
+## Features
 
-## 🛠️ Установка и запуск
+- Sums up total pool quotas across all active Antigravity accounts (e.g., 650% Gemini across 10 accounts).
+- Calculates the earliest reset time in minutes for models running low.
+- Native Windows 11 dark context menu and monochrome tray icon.
+- Runs with per-monitor DPI awareness so text stays sharp on 1440p and 4K displays.
+- Non-blocking updates: polls accounts concurrently with a thread pool in 1-2 seconds.
+- Single-instance lock via named Win32 mutex to prevent duplicate tray processes.
+- Memory footprint stays around 15 MB RAM.
 
-### Вариант 1: Быстрая установка (1 клик)
-1. Склонируйте репозиторий или скачайте архив:
+## Getting started
+
+### Requirements
+- Windows 10 or 11
+- Python 3.9+
+- 9Router installed and running locally
+
+### Installation
+
+1. Clone or download the repository:
    ```bash
    git clone https://github.com/arturg-sudo/9router-antigravity-tray.git
    cd 9router-antigravity-tray
    ```
-2. Запустите файл `install.bat` двойным кликом:
-   - Он автоматически установит нужные библиотеки (`pystray`, `pillow`).
-   - Добавит бесшумный запуск в автозагрузку Windows.
-   - Запустит монитор в трее.
 
-### Вариант 2: Вручную
-1. Установите зависимости:
-   ```bash
-   pip install -r requirements.txt
-   ```
-2. Запустите в фоне без окна консоли:
-   ```bash
-   wscript.exe run.vbs
-   ```
+2. Run `install.bat`:
+   - Installs `pystray` and `pillow`.
+   - Adds silent background startup to your Windows Startup folder.
+   - Starts the monitor immediately.
 
----
+Alternatively, install dependencies manually with `pip install -r requirements.txt` and launch via `wscript.exe run.vbs`.
 
-## ⚙️ Управление через меню (ПКМ)
+## Usage
 
-По правому клику на значок **`9`** в системном трее доступно:
-- **Статус квот**: сводные проценты и таймеры сброса для Gemini и Claude.
-- **Аккаунты**: подменю со списком всех подключенных почт и их персональными процентами.
-- **Стиль значка**:
-  - `Логотип 9`: лаконичный монохромный квадрат с логотипом.
-  - `Только процент %`: текущий суммарный процент пула.
-  - `Логотип + %`: компактная плашка с логотипом и процентом.
-- **🔄 Обновить сейчас**: принудительное внеочередное обновление.
-- **❌ Выход**: завершение работы монитора.
+Right-click the tray icon near the clock:
+- **Quotas and timers**: View aggregated pool percentage and minutes left until reset for Gemini and Claude.
+- **Accounts**: Expand the submenu to see individual account statuses and percentages.
+- **Icon style**: Switch between logo only, percentage only, or logo with percentage.
+- **Refresh now**: Trigger an immediate update.
+- **Exit**: Stop the monitor.
 
----
+## Configuration
 
-## 📄 Лицензия
+Settings are saved locally to `~/.hermes/antigravity_tray_config.json`. You can adjust polling interval, timer format, or icon style directly through the menu or in the config file.
 
-Проект распространяется под открытой лицензией [MIT](LICENSE).
+## License
+
+MIT
