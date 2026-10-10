@@ -89,6 +89,7 @@ DEFAULT_CONFIG = {
     "show_gemini": True,
     "show_gemini_weekly": True,
     "show_claude": True,
+    "show_claude_weekly": True,
     "show_accounts_detail": True,
     "timer_format": "minutes",    # "minutes" (135 мин) or "hours" (2ч 15м)
     "show_timer": True,
@@ -249,11 +250,13 @@ class AntigravityTray:
         self.gemini_sum = 0.0
         self.gemini_weekly_sum = 0.0
         self.claude_sum = 0.0
+        self.claude_weekly_sum = 0.0
         self.max_possible = 0.0
         self.accounts_data = []
         self.g_earliest_reset = None
         self.gw_earliest_reset = None
         self.c_earliest_reset = None
+        self.cw_earliest_reset = None
         
         self._update_lock = threading.Lock()
         self._last_icon_key = None
@@ -317,9 +320,11 @@ class AntigravityTray:
         g_str = format_time_until(self.g_earliest_reset, fmt) if show_t else ""
         gw_str = format_hours_until(self.gw_earliest_reset) if show_t else ""
         c_str = format_time_until(self.c_earliest_reset, fmt) if show_t else ""
+        cw_str = format_hours_until(self.cw_earliest_reset) if show_t else ""
         g_suffix = f" {g_str}" if g_str else ""
         gw_suffix = f" {gw_str}" if gw_str else ""
         c_suffix = f" {c_str}" if c_str else ""
+        cw_suffix = f" {cw_str}" if cw_str else ""
 
         current_style = self.cfg.get("icon_style", "logo")
         style_items = [
@@ -344,6 +349,8 @@ class AntigravityTray:
             menu_items.append(pystray.MenuItem(f"Weekly: {self.gemini_weekly_sum:.0f}%{gw_suffix}", lambda: None, enabled=True))
         if self.cfg.get("show_claude", True):
             menu_items.append(pystray.MenuItem(f"Claude: {self.claude_sum:.0f}%{c_suffix}", lambda: None, enabled=True))
+        if self.cfg.get("show_claude_weekly", True):
+            menu_items.append(pystray.MenuItem(f"Weekly: {self.claude_weekly_sum:.0f}%{cw_suffix}", lambda: None, enabled=True))
 
         menu_items.append(pystray.Menu.SEPARATOR)
         if self.cfg.get("show_accounts_detail", True):
@@ -384,17 +391,27 @@ class AntigravityTray:
                 c_dt = parse_iso_time(quotas[m].get("resetAt"))
                 break
 
+        cw_pct = 0.0
+        cw_dt = None
+        if "claude_gpt_weekly" in quotas and "remainingPercentage" in quotas["claude_gpt_weekly"]:
+            cw_pct = float(quotas["claude_gpt_weekly"]["remainingPercentage"])
+            cw_dt = parse_iso_time(quotas["claude_gpt_weekly"].get("resetAt"))
+
         fmt = self.cfg.get("timer_format", "minutes")
         return {
             "name": name,
             "gemini": g_pct,
             "gemini_weekly": gw_pct,
             "claude": c_pct,
+            "claude_weekly": cw_pct,
             "g_dt": g_dt,
             "gw_dt": gw_dt,
             "c_dt": c_dt,
+            "cw_dt": cw_dt,
             "g_reset_short": format_short_reset(g_dt, fmt) if g_pct < 99.5 else "",
             "gw_reset_short": format_short_reset(gw_dt, fmt) if gw_pct < 99.5 else "",
+            "c_reset_short": format_short_reset(c_dt, fmt) if c_pct < 99.5 else "",
+            "cw_reset_short": format_short_reset(cw_dt, fmt) if cw_pct < 99.5 else "",
             "error": data.get("error")
         }
 
@@ -418,6 +435,7 @@ class AntigravityTray:
                 self.gemini_sum = 0.0
                 self.gemini_weekly_sum = 0.0
                 self.claude_sum = 0.0
+                self.claude_weekly_sum = 0.0
                 self.max_possible = 0.0
                 if self.icon:
                     self.icon.title = "9Router: нет активных аккаунтов"[:127]
@@ -445,14 +463,17 @@ class AntigravityTray:
             g_sum = 0.0
             gw_sum = 0.0
             c_sum = 0.0
+            cw_sum = 0.0
             g_earliest = None
             gw_earliest = None
             c_earliest = None
+            cw_earliest = None
 
             for r in results:
                 g_sum += r["gemini"]
                 gw_sum += r.get("gemini_weekly", 0.0)
                 c_sum += r["claude"]
+                cw_sum += r.get("claude_weekly", 0.0)
 
                 if r["g_dt"] and r["g_dt"] > now and r["gemini"] < 99.5:
                     if g_earliest is None or r["g_dt"] < g_earliest:
@@ -466,13 +487,19 @@ class AntigravityTray:
                     if c_earliest is None or r["c_dt"] < c_earliest:
                         c_earliest = r["c_dt"]
 
+                if r.get("cw_dt") and r["cw_dt"] > now and r.get("claude_weekly", 100.0) < 99.5:
+                    if cw_earliest is None or r["cw_dt"] < cw_earliest:
+                        cw_earliest = r["cw_dt"]
+
             self.accounts_data = results
             self.gemini_sum = g_sum
             self.gemini_weekly_sum = gw_sum
             self.claude_sum = c_sum
+            self.claude_weekly_sum = cw_sum
             self.g_earliest_reset = g_earliest
             self.gw_earliest_reset = gw_earliest
             self.c_earliest_reset = c_earliest
+            self.cw_earliest_reset = cw_earliest
             self.max_possible = len(accounts) * 100.0
 
             if self.icon:
@@ -493,6 +520,10 @@ class AntigravityTray:
                     c_str = format_time_until(self.c_earliest_reset, fmt) if show_t else ""
                     c_suffix = f" {c_str}" if c_str else ""
                     title_lines.append(f"Claude: {self.claude_sum:.0f}%{c_suffix}")
+                if self.cfg.get("show_claude_weekly", True):
+                    cw_str = format_hours_until(self.cw_earliest_reset) if show_t else ""
+                    cw_suffix = f" {cw_str}" if cw_str else ""
+                    title_lines.append(f"Weekly: {self.claude_weekly_sum:.0f}%{cw_suffix}")
 
                 self.icon.title = "\n".join(title_lines)[:127]
                 self.icon.menu = self.build_menu()
