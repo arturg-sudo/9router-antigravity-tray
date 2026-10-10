@@ -196,6 +196,20 @@ def format_short_reset(dt, fmt="minutes"):
     except Exception:
         return ""
 
+def format_hours_until(dt):
+    if not dt:
+        return ""
+    try:
+        now = datetime.now(timezone.utc)
+        delta = dt - now
+        total_seconds = int(delta.total_seconds())
+        if total_seconds <= 0:
+            return "0ч"
+        hours = max(1, total_seconds // 3600)
+        return f"{hours}ч"
+    except Exception:
+        return ""
+
 def create_monochrome_icon(style="logo", display_pct=0.0):
     size = 64
     img = Image.new("RGBA", (size, size), color=(0, 0, 0, 0))
@@ -301,7 +315,7 @@ class AntigravityTray:
             acc_submenu = pystray.Menu(pystray.MenuItem("Нет данных", lambda: None, enabled=True))
 
         g_str = format_time_until(self.g_earliest_reset, fmt) if show_t else ""
-        gw_str = format_time_until(self.gw_earliest_reset, fmt) if show_t else ""
+        gw_str = format_hours_until(self.gw_earliest_reset) if show_t else ""
         c_str = format_time_until(self.c_earliest_reset, fmt) if show_t else ""
         g_suffix = f" {g_str}" if g_str else ""
         gw_suffix = f" {gw_str}" if gw_str else ""
@@ -327,7 +341,7 @@ class AntigravityTray:
         if self.cfg.get("show_gemini", True):
             menu_items.append(pystray.MenuItem(f"Gemini: {self.gemini_sum:.0f}%{g_suffix}", lambda: None, enabled=True))
         if self.cfg.get("show_gemini_weekly", True):
-            menu_items.append(pystray.MenuItem(f"Gemini Weekly: {self.gemini_weekly_sum:.0f}%{gw_suffix}", lambda: None, enabled=True))
+            menu_items.append(pystray.MenuItem(f"Weekly: {self.gemini_weekly_sum:.0f}%{gw_suffix}", lambda: None, enabled=True))
         if self.cfg.get("show_claude", True):
             menu_items.append(pystray.MenuItem(f"Claude: {self.claude_sum:.0f}%{c_suffix}", lambda: None, enabled=True))
 
@@ -472,9 +486,9 @@ class AntigravityTray:
                     g_suffix = f" {g_str}" if g_str else ""
                     title_lines.append(f"Gemini: {self.gemini_sum:.0f}%{g_suffix}")
                 if self.cfg.get("show_gemini_weekly", True):
-                    gw_str = format_time_until(self.gw_earliest_reset, fmt) if show_t else ""
+                    gw_str = format_hours_until(self.gw_earliest_reset) if show_t else ""
                     gw_suffix = f" {gw_str}" if gw_str else ""
-                    title_lines.append(f"Gemini W: {self.gemini_weekly_sum:.0f}%{gw_suffix}")
+                    title_lines.append(f"Weekly: {self.gemini_weekly_sum:.0f}%{gw_suffix}")
                 if self.cfg.get("show_claude", True):
                     c_str = format_time_until(self.c_earliest_reset, fmt) if show_t else ""
                     c_suffix = f" {c_str}" if c_str else ""
