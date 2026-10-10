@@ -6,6 +6,10 @@ Tracks aggregated pool percentage and earliest quota reset times with full GUI S
 """
 
 import ctypes
+import sys
+
+# Strip inherited external virtualenvs from sys.path to prevent C-extension binary collisions
+sys.path = [p for p in sys.path if not ("environments" in p and "venv" in p)]
 
 # 1. Enable Per-Monitor V2 DPI awareness BEFORE importing any UI or graphics libs
 try:
@@ -83,6 +87,7 @@ DEFAULT_CONFIG = {
     "icon_style": "logo",          # "logo", "digits", "combo"
     "theme": "dark",              # "dark", "light"
     "show_gemini": True,
+    "show_gemini_weekly": True,
     "show_claude": True,
     "show_accounts_detail": True,
     "timer_format": "minutes",    # "minutes" (135 мин) or "hours" (2ч 15м)
@@ -161,6 +166,10 @@ def format_time_until(dt, fmt="minutes"):
         if total_seconds <= 0:
             return "0 мин" if fmt == "minutes" else "сейчас"
         minutes = max(1, total_seconds // 60)
+        if minutes >= 1440:
+            d, rem = divmod(minutes, 1440)
+            h = rem // 60
+            return f"{d}д {h}ч"
         if fmt == "hours" and minutes >= 60:
             h, m = divmod(minutes, 60)
             return f"{h}ч {m}м"
@@ -176,6 +185,10 @@ def format_short_reset(dt, fmt="minutes"):
         delta = dt - now
         total_seconds = int(delta.total_seconds())
         minutes = max(0, total_seconds // 60)
+        if minutes >= 1440:
+            d, rem = divmod(minutes, 1440)
+            h = rem // 60
+            return f"{d}д {h}ч"
         if fmt == "hours" and minutes >= 60:
             h, m = divmod(minutes, 60)
             return f"{h}ч {m}м"
@@ -220,10 +233,12 @@ class AntigravityTray:
 
         self.icon = None
         self.gemini_sum = 0.0
+        self.gemini_weekly_sum = 0.0
         self.claude_sum = 0.0
         self.max_possible = 0.0
         self.accounts_data = []
         self.g_earliest_reset = None
+        self.gw_earliest_reset = None
         self.c_earliest_reset = None
         
         self._update_lock = threading.Lock()
@@ -274,8 +289,9 @@ class AntigravityTray:
                 if show_t and r.get("g_reset_short"):
                     reset_txt = f"  {format_short_reset(r.get('g_dt'), fmt)}"
                 g_val = int(round(r['gemini']))
+                gw_val = int(round(r.get('gemini_weekly', 0.0)))
                 c_val = int(round(r['claude']))
-                label = f"[{g_val:3d}% G | {c_val:3d}% C]  {r['name']}{reset_txt}"
+                label = f"[{g_val:3d}% G | {gw_val:3d}% W | {c_val:3d}% C]  {r['name']}{reset_txt}"
             acc_items.append(pystray.MenuItem(label, lambda: None, enabled=True))
 
         # Safe submenu
@@ -285,8 +301,10 @@ class AntigravityTray:
             acc_submenu = pystray.Menu(pystray.MenuItem("Нет данных", lambda: None, enabled=True))
 
         g_str = format_time_until(self.g_earliest_reset, fmt) if show_t else ""
+        gw_str = format_time_until(self.gw_earliest_reset, fmt) if show_t else ""
         c_str = format_time_until(self.c_earliest_reset, fmt) if show_t else ""
         g_suffix = f" {g_str}" if g_str else ""
+        gw_suffix = f" {gw_str}" if gw_str else ""
         c_suffix = f" {c_str}" if c_str else ""
 
         current_style = self.cfg.get("icon_style", "logo")
@@ -308,6 +326,8 @@ class AntigravityTray:
         menu_items = []
         if self.cfg.get("show_gemini", True):
             menu_items.append(pystray.MenuItem(f"Gemini: {self.gemini_sum:.0f}%{g_suffix}", lambda: None, enabled=True))
+        if self.cfg.get("show_gemini_weekly", True):
+            menu_items.append(pystray.MenuItem(f"Gemini Weekly: {self.gemini_weekly_sum:.0f}%{gw_suffix}", lambda: None, enabled=True))
         if self.cfg.get("show_claude", True):
             menu_items.append(pystray.MenuItem(f"Claude: {self.claude_sum:.0f}%{c_suffix}", lambda: None, enabled=True))
 
@@ -330,15 +350,21 @@ class AntigravityTray:
         quotas = data.get("quotas", {})
         g_pct = 0.0
         g_dt = None
-        for m in ["gemini-3.8-flash-high", "gemini-3.8-flash-medium", "gemini-3.7-flash-high", "gemini-pro-agent"]:
+        for m in ["gemini_session", "gemini-3.8-flash-high", "gemini-3.8-flash-medium", "gemini-3.7-flash-high", "gemini-pro-agent"]:
             if m in quotas and "remainingPercentage" in quotas[m]:
                 g_pct = float(quotas[m]["remainingPercentage"])
                 g_dt = parse_iso_time(quotas[m].get("resetAt"))
                 break
 
+        gw_pct = 0.0
+        gw_dt = None
+        if "gemini_weekly" in quotas and "remainingPercentage" in quotas["gemini_weekly"]:
+            gw_pct = float(quotas["gemini_weekly"]["remainingPercentage"])
+            gw_dt = parse_iso_time(quotas["gemini_weekly"].get("resetAt"))
+
         c_pct = 0.0
         c_dt = None
-        for m in ["claude-sonnet-4-6", "claude-opus-4-6-thinking"]:
+        for m in ["claude_gpt_session", "claude-sonnet-4-6", "claude-opus-4-6-thinking"]:
             if m in quotas and "remainingPercentage" in quotas[m]:
                 c_pct = float(quotas[m]["remainingPercentage"])
                 c_dt = parse_iso_time(quotas[m].get("resetAt"))
@@ -348,10 +374,13 @@ class AntigravityTray:
         return {
             "name": name,
             "gemini": g_pct,
+            "gemini_weekly": gw_pct,
             "claude": c_pct,
             "g_dt": g_dt,
+            "gw_dt": gw_dt,
             "c_dt": c_dt,
             "g_reset_short": format_short_reset(g_dt, fmt) if g_pct < 99.5 else "",
+            "gw_reset_short": format_short_reset(gw_dt, fmt) if gw_pct < 99.5 else "",
             "error": data.get("error")
         }
 
@@ -373,6 +402,7 @@ class AntigravityTray:
             if not accounts:
                 self.accounts_data = []
                 self.gemini_sum = 0.0
+                self.gemini_weekly_sum = 0.0
                 self.claude_sum = 0.0
                 self.max_possible = 0.0
                 if self.icon:
@@ -399,17 +429,24 @@ class AntigravityTray:
             self.is_offline = False
             now = datetime.now(timezone.utc)
             g_sum = 0.0
+            gw_sum = 0.0
             c_sum = 0.0
             g_earliest = None
+            gw_earliest = None
             c_earliest = None
 
             for r in results:
                 g_sum += r["gemini"]
+                gw_sum += r.get("gemini_weekly", 0.0)
                 c_sum += r["claude"]
 
                 if r["g_dt"] and r["g_dt"] > now and r["gemini"] < 99.5:
                     if g_earliest is None or r["g_dt"] < g_earliest:
                         g_earliest = r["g_dt"]
+
+                if r.get("gw_dt") and r["gw_dt"] > now and r.get("gemini_weekly", 100.0) < 99.5:
+                    if gw_earliest is None or r["gw_dt"] < gw_earliest:
+                        gw_earliest = r["gw_dt"]
 
                 if r["c_dt"] and r["c_dt"] > now and r["claude"] < 99.5:
                     if c_earliest is None or r["c_dt"] < c_earliest:
@@ -417,8 +454,10 @@ class AntigravityTray:
 
             self.accounts_data = results
             self.gemini_sum = g_sum
+            self.gemini_weekly_sum = gw_sum
             self.claude_sum = c_sum
             self.g_earliest_reset = g_earliest
+            self.gw_earliest_reset = gw_earliest
             self.c_earliest_reset = c_earliest
             self.max_possible = len(accounts) * 100.0
 
@@ -432,6 +471,10 @@ class AntigravityTray:
                     g_str = format_time_until(self.g_earliest_reset, fmt) if show_t else ""
                     g_suffix = f" {g_str}" if g_str else ""
                     title_lines.append(f"Gemini: {self.gemini_sum:.0f}%{g_suffix}")
+                if self.cfg.get("show_gemini_weekly", True):
+                    gw_str = format_time_until(self.gw_earliest_reset, fmt) if show_t else ""
+                    gw_suffix = f" {gw_str}" if gw_str else ""
+                    title_lines.append(f"Gemini W: {self.gemini_weekly_sum:.0f}%{gw_suffix}")
                 if self.cfg.get("show_claude", True):
                     c_str = format_time_until(self.c_earliest_reset, fmt) if show_t else ""
                     c_suffix = f" {c_str}" if c_str else ""
