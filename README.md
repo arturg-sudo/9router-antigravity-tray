@@ -1,22 +1,23 @@
 # 9router-antigravity-tray
 
-A lightweight Windows system tray monitor for 9Router Antigravity accounts. It tracks aggregated Gemini and Claude pool quotas across multiple accounts and shows the earliest reset timer.
+A lightweight Windows system tray monitor for **OmniRoute** and **9Router** Antigravity accounts. It tracks aggregated Gemini and Claude pool quotas across multiple accounts, supports remote cloud servers and local routers, and provides a built-in GUI settings dialog.
 
 [English](README.md) | [Русский](README_RU.md)
 
 ## Why this exists
 
-This tool displays Antigravity quota stats directly in the Windows system tray near the clock. It reads the local 9Router database and API on your machine, tallies total pool percentages, and tracks the earliest reset time without needing to open the web UI.
+This tool displays Antigravity quota stats directly in the Windows system tray near the clock. It connects to your remote OmniRoute server or local 9Router instance, tallies total pool percentages, and tracks quotas without needing to open the web UI.
 
 ## Features
 
-- Sums up total pool quotas across all active Antigravity accounts.
-- Calculates the earliest reset time in minutes for models running low.
-- Native Windows 11 dark context menu and monochrome tray icon.
-- Runs with per-monitor DPI awareness so text stays sharp on 1440p and 4K displays.
-- Non-blocking updates: polls accounts concurrently with a thread pool in 1-2 seconds.
-- Single-instance lock via named Win32 mutex to prevent duplicate tray processes.
-- Memory footprint stays around 15 MB RAM.
+- **Dual router support**: Connects to remote **OmniRoute** servers (via API key / Management Token) or local **9Router** / **OmniRoute** instances.
+- **GUI Settings Dialog**: Double-click the tray icon to open a native Windows 11 dark-mode settings dialog with instant connection testing.
+- **Quick Source Switching**: Switch between cloud server and local router directly from the tray context menu in 1 click.
+- **Aggregated pool quotas**: Sums up 5-hour session and weekly quotas across all active Antigravity accounts.
+- **Native Windows 11 styling**: Dark context menu, monochrome icons (Logo '9', Logo 'Ω', digits %, or combo).
+- **Per-Monitor V2 DPI awareness**: Crisp rendering on 125%, 150%, and 200% scaling displays.
+- **Non-blocking & lightweight**: Polls accounts concurrently in ~1 second with ~15 MB RAM usage.
+- **Single-instance lock**: Named Win32 mutex prevents duplicate processes.
 
 ## Getting started
 
